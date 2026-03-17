@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rizzpoint - Gmail-like Email Client Tanpa Verifikasi</title>
+    <meta name="description" content="Buat email tanpa verifikasi nomor HP. Kirim dan terima pesan antar user! Admin dashboard lengkap.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #202124; line-height: 1.5; }
+        .app-wrapper { display: none; height: 100vh; flex-direction: column; }
+        .app-wrapper.active { display: flex; }
+        .header { background: white; border-bottom: 1px solid #e8eaed; padding: 8px 16px; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .logo { font-size: 24px; font-weight: bold; color: #1a73e8; }
+        .search-box { flex: 1; max-width: 400px; background: #f1f3f4; border: 1px solid transparent; border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; }
+        .search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; }
+        .search-box input::placeholder { color: #9aa0a6; }
+        .header-actions { display: flex; gap: 16px; align-items: center; }
+        .icon-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 8px; border-radius: 50%; transition: background 0.3s; }
+        .icon-btn:hover { background: rgba(0,0,0,0.08); }
+        .user-profile { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; cursor: pointer; }
+        .user-menu { position: absolute; top: 60px; right: 20px; background: white; border: 1px solid #e8eaed; border-radius: 8px; box-shadow: 0 2px 16px rgba(0,0,0,0.12); min-width: 200px; z-index: 100; display: none; }
+        .user-menu.active { display: block; }
+        .user-menu-item { padding: 12px 16px; cursor: pointer; transition: background 0.2s; }
+        .user-menu-item:hover { background: #f8f9fa; }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 256px; background: white; border-right: 1px solid #e8eaed; padding: 16px 8px; overflow-y: auto; }
+        .compose-btn { width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 24px; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 16px; transition: transform 0.2s; }
+        .compose-btn:hover { transform: scale(1.05); }
+        .folder-list { list-style: none; }
+        .folder-item { padding: 8px 12px; margin: 4px 0; cursor: pointer; border-radius: 0 16px 16px 0; transition: all 0.2s; display: flex; gap: 12px; align-items: center; }
+        .folder-item:hover { background: #f1f3f4; }
+        .folder-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 500; }
+        .folder-item .count { margin-left: auto; font-size: 12px; color: #666; }
+        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .email-list-header { padding: 12px 16px; border-bottom: 1px solid #e8eaed; display: flex; gap: 12px; align-items: center; background: #f8f9fa; }
+        .email-item { padding: 12px 16px; border-bottom: 1px solid #e8eaed; cursor: pointer; display: flex; gap: 12px; align-items: center; transition: background 0.2s; }
+        .email-item:hover { background: #f8f9fa; }
+        .email-item.unread { background: #f0f7ff; font-weight: 500; }
+        .email-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0; }
+        .email-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .email-from { font-weight: 500; color: #202124; }
+        .email-subject { color: #202124; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-preview { color: #5f6368; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .email-date { color: #9aa0a6; font-size: 13px; flex-shrink: 0; }
+        .email-detail { background: white; padding: 0; display: flex; flex-direction: column; flex: 1; overflow: hidden; display: none; }
+        .email-detail.active { display: flex; }
+        .detail-header { padding: 16px; border-bottom: 1px solid #e8eaed; display: flex; justify-content: space-between; align-items: center; }
+        .detail-subject { font-size: 20px; font-weight: 500; }
+        .detail-actions { display: flex; gap: 8px; }
+        .detail-meta { padding: 16px; border-bottom: 1px solid #e8eaed; }
+        .from-to { display: flex; gap: 100px; flex-wrap: wrap; }
+        .detail-body { flex: 1; padding: 16px; overflow-y: auto; font-size: 14px; line-height: 1.6; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; z-index: 1000; }
+        .modal.active { display: flex; }
+        .compose-form { background: white; width: 600px; max-width: 100%; border-radius: 12px 12px 0 0; display: flex; flex-direction: column; max-height: 80vh; box-shadow: 0 -2px 16px rgba(0,0,0,0.15); }
+        .form-row { display: flex; padding: 12px 16px; border-bottom: 1px solid #e8eaed; }
+        .form-row label { width: 60px; color: #5f6368; font-size: 13px; display: flex; align-items: center; }
+        .form-row input, .form-row textarea { flex: 1; border: none; outline: none; font-size: 14px; resize: none; }
+        .form-row textarea { min-height: 150px; padding: 8px; }
+        .login-page { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .login-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 375px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 4px; color: #202124; font-size: 14px; }
+        .form-group input { width: 100%; padding: 10px 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
+        .login-btn { width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: transform 0.2s; }
+        .admin-page, .login-page { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; }
+        .admin-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 90%; max-width: 1000px; max-height: 90vh; overflow-y: auto; }
+        .users-table { width: 100%; border-collapse: collapse; }
+        .users-table th, .users-table td { padding: 12px; border-bottom: 1px solid #e8eaed; text-align: left; }
+        .users-table thead { background: #f8f9fa; }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-page" style="display: flex;">
+        <div class="login-container">
+            <h1 style="text-align: center; margin-bottom: 20px;">📧 Rizzpoint</h1>
+            <p style="text-align: center; color: #5f6368; margin-bottom: 30px;">Email tanpa verifikasi telepon</p>
+            <form onsubmit="handleLogin(event); return false;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="nama@rizzpoint.id" value="user@rizzpoint.id" required style="width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 4px;">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="password" value="password" required style="width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 4px;">
+                </div>
+                <button type="submit" class="login-btn" style="width: 100%; padding: 12px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Login</button>
+            </form>
+            <p style="text-align: center; margin-top: 20px; color: #5f6368;">
+                Admin: rizzpoin@official.id / abdul032211.123
+            </p>
+        </div>
+    </div>
+
+    <!-- App Page (Hidden initially) -->
+    <div id="appPage" class="app-wrapper" style="display: none;">
+        <div class="header">
+            <div class="logo">📧 Rizzpoint</div>
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" id="searchInput" placeholder="Cari email..." oninput="searchEmails()">
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleDarkMode()" title="Dark Mode">🌙</button>
+                <button class="icon-btn" onclick="handleLogout()" title="Logout">🚪</button>
+            </div>
+        </div>
+        <div class="main-container">
+            <div class="sidebar">
+                <button class="compose-btn" onclick="openCompose()">✏️ Tulis</button>
+                <ul class="folder-list">
+                    <li class="folder-item active" onclick="loadFolder('inbox')">
+                        <span>📥</span>Inbox <span class="count" id="count-inbox">5</span>
+                    </li>
+                    <li class="folder-item" onclick="loadFolder('sent')">
+                        <span>📤</span>Terkirim <span class="count" id="count-sent">2</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="content-area">
+                <div class="email-list" id="emailList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Modal -->
+    <div id="composeModal" class="modal" style="display: none;">
+        <div class="compose-form">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #e8eaed; display: flex; justify-content: space-between;">
+                <span>✏️ Tulis Email</span>
+                <button onclick="closeCompose()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+            </div>
+            <div style="flex: 1; padding: 12px; overflow-y: auto;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px;">Ke:</label>
+                    <input type="email" id="composeTo" placeholder="penerima@rizzpoint.id" style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px;">Subjek:</label>
+                    <input type="text" id="composeSubject" placeholder="Subjek" style="width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px;">
+                </div>
+                <textarea id="composeBody" placeholder="Tulis pesan..." style="width: 100%; height: 200px; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+            <div style="padding: 12px 16px; border-top: 1px solid #e8eaed; display: flex; justify-content: flex-end; gap: 8px;">
+                <button onclick="sendEmail()" style="padding: 8px 16px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Storage
+        const USERS_KEY = 'rizzpoint_users';
+        const EMAILS_KEY = 'rizzpoint_emails';
+
+        // Init data
+        function initData() {
+            if (!localStorage.getItem(USERS_KEY)) {
+                localStorage.setItem(USERS_KEY, JSON.stringify([
+                    {id: 1, name: 'Demo User', email: 'user@rizzpoint.id', password: 'password', role: 'user'},
+                    {id: 2, name: 'Admin', email: 'admin@rizzpoint.id', password: 'admin123', role: 'admin'}
+                ]));
+            }
+            if (!localStorage.getItem(EMAILS_KEY)) {
+                localStorage.setItem(EMAILS_KEY, JSON.stringify([
+                    {id: 1, from: 'admin@rizzpoint.id', to: 'user@rizzpoint.id', subject: 'Selamat Datang!', body: 'Welcome to Rizzpoint!', date: new Date().toLocaleString(), folder: 'inbox'},
+                    {id: 2, from: 'user@rizzpoint.id', to: 'admin@rizzpoint.id', subject: 'Test Email', body: 'Hello admin!', date: new Date().toLocaleString(), folder: 'sent'}
+                ]));
+            }
+        }
+
+        initData();
+
+        let currentUser = null;
+        let currentFolder = 'inbox';
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const user = users.find(u => u.email === email && u.password === password);
+
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('appPage').style.display = 'flex';
+                document.querySelector('.user-profile').textContent = user.name[0].toUpperCase();
+                loadFolder('inbox');
+            } else {
+                alert('Login gagal!');
+            }
+        }
+
+        function loadFolder(folder) {
+            currentFolder = folder;
+            const emails = JSON.parse(localStorage.getItem(EMAILS_KEY) || '[]').filter(e => e.to === currentUser.email && e.folder === folder);
+            const emailList = document.getElementById('emailList');
+            emailList.innerHTML = '';
+            emails.forEach(email => {
+                const div = document.createElement('div');
+                div.className = 'email-item';
+                div.innerHTML = `
+                    <div class="email-avatar">${email.from[0].toUpperCase()}</div>
+                    <div class="email-content">
+                        <div class="email-from">${email.from}</div>
+                        <div class="email-subject">${email.subject}</div>
+                    </div>
+                    <div class="email-date">${email.date}</div>
+                `;
+                div.onclick = () => viewEmail(email);
+                emailList.appendChild(div);
+            });
+        }
+
+        function viewEmail(email) {
+            alert(`From: ${email.from}\nSubject: ${email.subject}\nBody: ${email.body}`);
+        }
+
+        function openCompose() {
+            document.getElementById('composeModal').style.display = 'flex';
+        }
+
+        function closeCompose() {
+            document.getElementById('composeModal').style.display = 'none';
+            document.getElementById('composeTo').value = '';
+            document.getElementById('composeSubject').value = '';
+            document.getElementById('composeBody').value = '';
+        }
+
+        function sendEmail() {
+            const to = document.getElementById('composeTo').value;
+            const subject = document.getElementById('composeSubject').value;
+            const body = document.getElementById('composeBody').value;
+            
+            if (to && subject && body) {
+                const emails = JSON.parse(localStorage.getItem(EMAILS_KEY) || '[]');
+                const newEmail = {
+                    id: Date.now(),
+                    from: currentUser.email,
+                    to: to,
+                    subject: subject,
+                    body: body,
+                    date: new Date().toLocaleString(),
+                    folder: 'inbox'
+                };
+                emails.push(newEmail);
+                localStorage.setItem(EMAILS_KEY, JSON.stringify(emails));
+                alert('Email terkirim!');
+                closeCompose();
+                loadFolder(currentFolder);
+            } else {
+                alert('Isi semua field!');
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Logout?')) {
+                currentUser = null;
+                document.getElementById('appPage').style.display = 'none';
+                document.getElementById('loginPage').style.display = 'flex';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function searchEmails() {
+            // Implementasi search
+        }
+    </script>
+</body>
+</html>
+

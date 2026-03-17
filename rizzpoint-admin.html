@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rizzpoint Admin - Kelola User</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .login-form, .admin-panel { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #4285f4; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; }
+        .delete { background: #dc3545; color: white; }
+        .edit { background: #ffc107; color: black; }
+        .add-user { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div id="loginForm" class="login-form">
+        <h2>Admin Login</h2>
+        <input type="email" id="adminEmail" placeholder="rizzpoin.office" value="rizzpoin.office">
+        <input type="password" id="adminPass" placeholder="abdul123" value="abdul123">
+        <button onclick="adminLogin()">Login Admin</button>
+    </div>
+
+    <div id="adminPanel" style="display: none;">
+        <h2>🏛️ Admin Dashboard - Kelola User</h2>
+        <p>Login berhasil sebagai: <strong id="currentAdmin"></strong></p>
+        <button onclick="addNewUser()" class="add-user">➕ Tambah User Baru</button>
+        <button onclick="logoutAdmin()">🚪 Logout</button>
+        
+        <h3>Daftar User (Edit/Hapus/Ganti PW)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nama</th>
+                    <th>Email</th>
+                    <th>Password</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="userTable">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const USERS_KEY = 'rizzpoint_users';
+        
+        const ADMIN_EMAIL = 'rizzpoin.office';
+        const ADMIN_PASS = 'abdul123';
+
+        function adminLogin() {
+            const email = document.getElementById('adminEmail').value;
+            const pass = document.getElementById('adminPass').value;
+            
+            if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                document.getElementById('currentAdmin').textContent = email;
+                loadUsers();
+            } else {
+                alert('❌ Admin credentials salah!');
+            }
+        }
+
+        function loadUsers() {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = '';
+            
+            users.forEach((user, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td><input type="text" value="${user.password}" onchange="updatePassword(${user.id}, this.value)" style="width: 120px;"></td>
+                    <td>
+                        <button onclick="deleteUser(${user.id})" class="delete">Hapus</button>
+                        <button onclick="editUser(${user.id})" class="edit">Edit</button>
+                    </td>
+                `;
+            });
+        }
+
+        function updatePassword(id, newPass) {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const user = users.find(u => u.id == id);
+            if (user) {
+                user.password = newPass;
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                alert('✅ Password diupdate!');
+            }
+        }
+
+        function deleteUser(id) {
+            if (confirm('Hapus user ini?')) {
+                let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                users = users.filter(u => u.id != id);
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                loadUsers();
+                alert('🗑️ User dihapus!');
+            }
+        }
+
+        function addNewUser() {
+            const name = prompt('Nama user baru:');
+            const email = prompt('Email (contoh: user@rizzpoint.id):');
+            const password = prompt('Password:');
+            
+            if (name && email && password) {
+                let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+                const newUser = {
+                    id: Date.now(),
+                    name: name,
+                    email: email,
+                    password: password,
+                    role: 'user'
+                };
+                users.push(newUser);
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                loadUsers();
+                alert('➕ User baru ditambahkan!');
+            }
+        }
+
+        function editUser(id) {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const user = users.find(u => u.id == id);
+            if (user) {
+                const newName = prompt('Nama baru:', user.name);
+                const newEmail = prompt('Email baru:', user.email);
+                if (newName && newEmail) {
+                    user.name = newName;
+                    user.email = newEmail;
+                    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+                    loadUsers();
+                    alert('✏️ User diupdate!');
+                }
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('adminEmail').value = '';
+            document.getElementById('adminPass').value = '';
+        }
+    </script>
+</body>
+</html>

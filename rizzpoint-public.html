@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rizzpoint - Email Client</title>
+</head>
+<body>
+    <h1>📧 Rizzpoint - Gmail Clone Tanpa Verifikasi</h1>
+    <p><strong>Login Demo:</strong></p>
+    <ul>
+        <li><strong>User:</strong> user@rizzpoint.id / <strong>Pass:</strong> password</li>
+        <li><strong>Admin:</strong> rizzpoin@official.id / <strong>Pass:</strong> abdul032211.123</li>
+        <li><strong>Admin Baru:</strong> rizzpoin.office / <strong>Pass:</strong> abdul123</li>
+    </ul>
+    <p><strong>Fitur:</strong> Kirim/terima email real antar user, admin dashboard kelola PW user, folder inbox/sent, search</p>
+    
+    <iframe src="RI ZZPOINT.html" width="100%" height="600" style="border: none; width: 100%; height: 80vh;"></iframe>
+    
+    <p><strong>Admin Panel Terpisah:</strong> <a href="rizzpoint-admin.html" target="_blank">Kelola User & Ganti PW</a></p>
+    
+    <script>
+        // Auto-login demo user jika kosong
+        if (!localStorage.getItem('rizzpoint_users')) {
+            localStorage.setItem('rizzpoint_users', JSON.stringify([
+                {id:1, name:'Demo User', email:'user@rizzpoint.id', password:'password', role:'user'},
+                {id:2, name:'Admin', email:'rizzpoin@official.id', password:'abdul032211.123', role:'admin'},
+                {id:3, name:'Office Admin', email:'rizzpoin.office', password:'abdul123', role:'admin'}
+            ]));
+        }
+    </script>
+</body>
+</html>
